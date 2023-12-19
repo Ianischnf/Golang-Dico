@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-// Dictionary est le dictionnaire avec des mots et des définitions.
+// Dictionary est le dico avec des mots et des définitions.
 type Dictionary map[string]string
 
 // crée un nouveau dictionnaire vide.
@@ -13,23 +13,23 @@ func NewDictionary() Dictionary {
 	return make(Dictionary)
 }
 
-// Add pour ajouter un mot et sa définition au dictionnaire.
+// Add pour ajouter un mot et sa définition au dico
 func (d Dictionary) Add(word, definition string) {
 	d[word] = definition
 }
 
-// Get récupère la définition d'un mot du dictionnaire.
+// Get récupère la définition d'un mot du dico.
 func (d Dictionary) Get(word string) (string, bool) {
 	definition, exists := d[word]
 	return definition, exists
 }
 
-// Remove supprime un mot et sa définition du dictionnaire.
+// Remove supprime un mot et sa définition du dico.
 func (d Dictionary) Remove(word string) {
 	delete(d, word)
 }
 
-// List renvoie une liste triée des mots et de leurs définitions.
+// List renvoie une liste triée des mots et de leurs dico.
 func (d Dictionary) List() []string {
 	var result []string
 	for word, definition := range d {
@@ -40,7 +40,7 @@ func (d Dictionary) List() []string {
 }
 
 func main() {
-	// Créez un nouveau dictionnaire.
+	// Créez un nouveau dico.
 	dictionary := NewDictionary()
 
 	// Ajout mot et définition
@@ -56,7 +56,7 @@ func main() {
 		fmt.Println("Word not found in the dictionary.")
 	}
 
-	// supprimer un mot du dictionnaire.
+	// supprimer un mot du dico.
 	dictionary.Remove("apple")
 
 	//  liste triée des mots et de leurs définitions.

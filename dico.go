@@ -43,12 +43,12 @@ func main() {
 	// Créez un nouveau dictionnaire.
 	dictionary := NewDictionary()
 
-	// Ajoutez quelques mots et définitions au dictionnaire.
+	// Ajout mot et définition
 	dictionary.Add("pomme", "un fruit")
 	dictionary.Add("java", "un langage de programmation orienté objet")
 	dictionary.Add("Putty", "Logiciel pour se connecter en SSH à un serveur distant")
 
-	// Utilisez la méthode Get pour afficher la définition d'un mot spécifique.
+	//  afficher la définition d'un mot spécifique.
 	definition, exists := dictionary.Get("golang")
 	if exists {
 		fmt.Printf("Definition de'putty': %s\n", definition)
@@ -56,10 +56,10 @@ func main() {
 		fmt.Println("Word not found in the dictionary.")
 	}
 
-	// Utilisez la méthode Remove pour supprimer un mot du dictionnaire.
+	// supprimer un mot du dictionnaire.
 	dictionary.Remove("apple")
 
-	// Appelez la méthode List pour obtenir la liste triée des mots et de leurs définitions.
+	//  liste triée des mots et de leurs définitions.
 	list := dictionary.List()
 	fmt.Println("Dictionary entries:")
 	for _, entry := range list {

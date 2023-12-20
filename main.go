@@ -2,43 +2,116 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"golang-dico/dictionary"
+	"net/http"
 )
+
+var dict *dictionary.Dictionary
 
 func main() {
 	// Créez un nouveau dictionnaire.
-	dict, err := dictionary.NewDictionary("dictionary.json")
+	dictionary, err := dictionary.NewDictionary("dictionary.json")
 	if err != nil {
 		fmt.Println("Erreur lors de la création du dictionnaire :", err)
 		return
 	}
+	dict = dictionary
 
-	// Créez des instances de la structure Entry avec les données spécifiées
-	entry1 := dictionary.Entry{Key: "pomme", Value: "un fruit"}
-	entry2 := dictionary.Entry{Key: "java", Value: "un langage de programmation orienté objet"}
-	entry3 := dictionary.Entry{Key: "Putty", Value: "Logiciel pour se connecter en SSH à un serveur distant"}
+	// Routes
+	http.HandleFunc("/add", addHandler)
+	http.HandleFunc("/get", getHandler)
+	http.HandleFunc("/remove", removeHandler)
+	http.HandleFunc("/list", listHandler)
 
-	// Ajoutez ces entrées au dictionnaire en utilisant la méthode Add
-	dict.Add(entry1)
-	dict.Add(entry2)
-	dict.Add(entry3)
+	// Démarrer le serveur HTTP
+	http.ListenAndServe(":8080", nil)
+}
 
-	// Afficher la définition d'un mot spécifique.
-	definition, exists := dict.Get("java")
-	if exists {
-		fmt.Printf("Definition de 'java': %s\n", definition)
-	} else {
-		fmt.Println("Word not found in the dictionary.")
+// addHandler gère les requêtes POST pour ajouter une entrée au dictionnaire.
+func addHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
 
-	// Supprimer un mot du dictionnaire.
-	dict.Remove("java")
+	// Décodage du corps de la requête (JSON) pour obtenir une entrée.
+	var entry dictionary.Entry
+	err := json.NewDecoder(r.Body).Decode(&entry)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	// Liste triée des mots et de leurs définitions.
+	// Ajouter l'entrée au dictionnaire.
+	dict.Add(entry)
+	w.WriteHeader(http.StatusCreated)
+}
+
+// getHandler gère les requêtes GET pour récupérer une définition par mot.
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Obtenir le mot à partir des paramètres de requête.
+	word := r.URL.Query().Get("word")
+	if word == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Récupérer la définition du mot dans le dictionnaire.
+	definition, exists := dict.Get(word)
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Répondre avec la définition.
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(definition))
+}
+
+// removeHandler gère les requêtes DELETE pour supprimer une entrée par mot.
+func removeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Obtenir le mot à partir des paramètres de requête.
+	word := r.URL.Query().Get("word")
+	if word == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Supprimer l'entrée du dictionnaire.
+	dict.Remove(word)
+	w.WriteHeader(http.StatusOK)
+}
+
+// listHandler gère les requêtes GET pour afficher toutes les entrées du dictionnaire.
+func listHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Obtenir la liste triée des entrées du dictionnaire.
 	list := dict.List()
-	fmt.Println("Dictionary entries:")
-	for _, entry := range list {
-		fmt.Println(entry)
+
+	// Convertir la liste en format JSON.
+	response, err := json.Marshal(list)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
+	// Répondre avec la liste JSON.
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
 }

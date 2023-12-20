@@ -12,8 +12,8 @@ import (
 type Dictionary struct {
 	entries    map[string]string
 	mu         sync.Mutex
-	addChan    chan Entry  // Canal pour l'opération d'ajout
-	removeChan chan string // Canal pour l'opération de suppression
+	addChan    chan Entry
+	removeChan chan string
 }
 
 // Structure Entry
@@ -37,7 +37,7 @@ func NewDictionary(filename string) (*Dictionary, error) {
 	}
 
 	// Lance les goroutines pour les opérations concurrentes
-	d.StartConcurrentOperations()
+	go d.StartConcurrentOperations()
 
 	return d, nil
 }
@@ -52,63 +52,39 @@ func (d *Dictionary) Remove(key string) {
 	d.removeChan <- key
 }
 
-// Entries renvoie une copie des entrées du dictionnaire
-func (d *Dictionary) Entries() map[string]string {
+// StartConcurrentOperations lance des goroutines pour les opérations concurrentes d'ajout et de suppression
+func (d *Dictionary) StartConcurrentOperations() {
+	for {
+		select {
+		case entry := <-d.addChan:
+			d.mu.Lock()
+			d.entries[entry.Key] = entry.Value
+			d.mu.Unlock()
+			d.saveToFile("dictionary.json")
+		case key := <-d.removeChan:
+			d.mu.Lock()
+			delete(d.entries, key)
+			d.mu.Unlock()
+			d.saveToFile("dictionary.json")
+		}
+	}
+}
+
+// Sauvegarde le dictionnaire dans un fichier
+func (d *Dictionary) saveToFile(filename string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	result := make(map[string]string, len(d.entries))
-	for k, v := range d.entries {
-		result[k] = v
+	data, err := json.Marshal(d.entries)
+	if err != nil {
+		fmt.Println("Erreur lors de la sérialisation JSON :", err)
+		return
 	}
 
-	return result
-}
-
-// StartConcurrentOperations lance des goroutines pour les opérations concurrentes d'ajout et de suppression
-func (d *Dictionary) StartConcurrentOperations() {
-	go func() {
-		for {
-			select {
-			case entry := <-d.addChan:
-				d.mu.Lock()
-				// Vérifie si la clé existe déjà dans le dictionnaire
-				if _, exists := d.entries[entry.Key]; exists {
-					// La clé existe, met à jour la valeur associée
-					d.entries[entry.Key] = entry.Value
-				} else {
-					// La clé n'existe pas, ajoute une nouvelle entrée
-					d.entries[entry.Key] = entry.Value
-				}
-				d.mu.Unlock()
-				d.saveToFileAsync("dictionary.json")
-			case key := <-d.removeChan:
-				d.mu.Lock()
-				delete(d.entries, key)
-				d.mu.Unlock()
-				d.saveToFileAsync("dictionary.json")
-			}
-		}
-	}()
-}
-
-// Sauvegarde le dictionnaire dans un fichier de manière asynchrone
-func (d *Dictionary) saveToFileAsync(filename string) {
-	go func() {
-		d.mu.Lock()
-		defer d.mu.Unlock()
-
-		data, err := json.Marshal(d.entries)
-		if err != nil {
-			fmt.Println("Erreur lors de la sérialisation JSON :", err)
-			return
-		}
-
-		err = ioutil.WriteFile(filename, data, 0644)
-		if err != nil {
-			fmt.Println("Erreur lors de l'écriture dans le fichier :", err)
-		}
-	}()
+	err = ioutil.WriteFile(filename, data, 0644)
+	if err != nil {
+		fmt.Println("Erreur lors de l'écriture dans le fichier :", err)
+	}
 }
 
 // Charge le dictionnaire à partir d'un fichier
@@ -144,15 +120,8 @@ func (d *Dictionary) List() []Entry {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// Utiliser une map temporaire pour éviter les doublons
-	tempMap := make(map[string]string)
-
-	for key, value := range d.entries {
-		tempMap[key] = value
-	}
-
 	var list []Entry
-	for key, value := range tempMap {
+	for key, value := range d.entries {
 		list = append(list, Entry{Key: key, Value: value})
 	}
 

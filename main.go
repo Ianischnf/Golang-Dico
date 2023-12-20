@@ -1,40 +1,47 @@
-// main.go
 package main
 
 import (
 	"fmt"
-
 	"golang-dico/dictionary"
+	"sync"
+	"time"
 )
 
 func main() {
-	// Créez un nouveau dictionnaire.
-	dict, err := dictionary.NewDictionary("dictionary.json")
-	if err != nil {
-		fmt.Println("Erreur lors de la création du dictionnaire :", err)
-		return
+	dict := dictionary.NewDictionary()
+	dict.StartConcurrentOperations()
+
+	var wg sync.WaitGroup
+
+	// Opérations d'ajout simultanées
+	for i := 1; i <= 5; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			entry := dictionary.Entry{
+				Key:   fmt.Sprintf("Key%d", index),
+				Value: fmt.Sprintf("Value%d", index),
+			}
+			dict.Add(entry)
+		}(i)
 	}
 
-	// Ajout mot et définition
-	dict.Add("pomme", "un fruit")
-	dict.Add("java", "un langage de programmation orienté objet")
-	dict.Add("Putty", "Logiciel pour se connecter en SSH à un serveur distant")
-
-	//  afficher la définition d'un mot spécifique.
-	definition, exists := dict.Get("golang")
-	if exists {
-		fmt.Printf("Definition de 'putty': %s\n", definition)
-	} else {
-		fmt.Println("Word not found in the dictionary.")
+	// Opérations de suppression simultanées
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			key := fmt.Sprintf("Key%d", index)
+			dict.Remove(key)
+		}(i)
 	}
 
-	// supprimer un mot du dictionnaire.
-	dict.Remove("apple")
+	// Attendez que toutes les goroutines se terminent
+	wg.Wait()
 
-	//  liste triée des mots et de leurs définitions.
-	list := dict.List()
-	fmt.Println("Dictionary entries:")
-	for _, entry := range list {
-		fmt.Println(entry)
-	}
+	// Pause pour permettre la synchronisation
+	time.Sleep(100 * time.Millisecond)
+
+	// Affichez le dictionnaire final
+	fmt.Println("Dictionnaire final:", dict.Entries())
 }

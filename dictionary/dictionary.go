@@ -1,7 +1,10 @@
+// dictionary.go
 package dictionary
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sort"
 )
 
@@ -9,8 +12,19 @@ import (
 type Dictionary map[string]string
 
 // crée un nouveau dictionnaire vide.
-func NewDictionary() Dictionary {
-	return make(Dictionary)
+func NewDictionary(filename string) (Dictionary, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("erreur lors de la lecture du fichier : %v", err)
+	}
+
+	var dict Dictionary
+	err = json.Unmarshal(data, &dict)
+	if err != nil {
+		return nil, fmt.Errorf("erreur lors de la conversion du JSON en dictionnaire : %v", err)
+	}
+
+	return dict, nil
 }
 
 // Add pour ajouter un mot et sa définition au dictionnaire.
@@ -37,4 +51,21 @@ func (d Dictionary) List() []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+// SaveToFile enregistre le dictionnaire dans un fichier JSON.
+func (d Dictionary) SaveToFile(filename string) error {
+	// Convertir le dictionnaire en JSON.
+	jsonData, err := json.MarshalIndent(d, "", "  ")
+	if err != nil {
+		return fmt.Errorf("erreur lors de la conversion du dictionnaire en JSON : %v", err)
+	}
+
+	// Écrire le JSON dans le fichier.
+	err = ioutil.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("erreur lors de l'écriture dans le fichier : %v", err)
+	}
+
+	return nil
 }

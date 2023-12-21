@@ -26,7 +26,10 @@ func main() {
 	http.HandleFunc("/list", listHandler)
 
 	// Démarrer le serveur HTTP
-	http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		fmt.Println("Erreur lors du démarrage du serveur HTTP :", err)
+	}
 }
 
 // addHandler gère les requêtes POST pour ajouter une entrée au dictionnaire.

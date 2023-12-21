@@ -54,20 +54,22 @@ func (d *Dictionary) Remove(key string) {
 
 // StartConcurrentOperations lance des goroutines pour les opérations concurrentes d'ajout et de suppression
 func (d *Dictionary) StartConcurrentOperations() {
-	for {
-		select {
-		case entry := <-d.addChan:
-			d.mu.Lock()
-			d.entries[entry.Key] = entry.Value
-			d.mu.Unlock()
-			d.saveToFile("dictionary.json")
-		case key := <-d.removeChan:
-			d.mu.Lock()
-			delete(d.entries, key)
-			d.mu.Unlock()
-			d.saveToFile("dictionary.json")
+	go func() {
+		for {
+			select {
+			case entry := <-d.addChan:
+				d.mu.Lock()
+				d.entries[entry.Key] = entry.Value
+				d.mu.Unlock()
+				d.saveToFile("dictionary.json")
+			case key := <-d.removeChan:
+				d.mu.Lock()
+				delete(d.entries, key)
+				d.mu.Unlock()
+				d.saveToFile("dictionary.json")
+			}
 		}
-	}
+	}()
 }
 
 // Sauvegarde le dictionnaire dans un fichier

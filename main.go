@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang-dico/dictionary"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -19,6 +20,8 @@ func main() {
 	}
 	dict = dictionary
 
+	//la fonction pour créer le fichier JSON
+	createJSONFile()
 	// Routes
 	http.HandleFunc("/add", addHandler)
 	http.HandleFunc("/get", getHandler)
@@ -26,7 +29,7 @@ func main() {
 	http.HandleFunc("/list", listHandler)
 
 	// Démarrer le serveur HTTP
-	err = http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8085", nil)
 	if err != nil {
 		fmt.Println("Erreur lors du démarrage du serveur HTTP :", err)
 	}
@@ -50,6 +53,13 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	// Ajouter l'entrée au dictionnaire.
 	dict.Add(entry)
 	w.WriteHeader(http.StatusCreated)
+
+	// Appeler la sauvegarde après l'ajout
+	dict.SaveToFile("dictionary.json")
+
+	// Appeler la fonction pour créer le fichier JSON après avoir ajouté une entrée
+	createJSONFile()
+
 }
 
 // getHandler gère les requêtes GET pour récupérer une définition par mot.
@@ -94,6 +104,8 @@ func removeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Supprimer l'entrée du dictionnaire.
 	dict.Remove(word)
+	fmt.Printf("Suppression réussie de la clé : %s\n", word)
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -117,4 +129,23 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	// Répondre avec la liste JSON.
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+// createJSONFile crée un fichier JSON avec les mots du dictionnaire
+func createJSONFile() {
+	// Obtenir la liste triée des entrées du dictionnaire.
+	list := dict.List()
+
+	// Convertir la liste en format JSON.
+	data, err := json.MarshalIndent(list, "", "    ")
+	if err != nil {
+		fmt.Println("Erreur lors de la sérialisation JSON :", err)
+		return
+	}
+
+	// Écrire les données JSON dans un fichier.
+	err = ioutil.WriteFile("dictionary_export.json", data, 0644)
+	if err != nil {
+		fmt.Println("Erreur lors de l'écriture dans le fichier JSON :", err)
+	}
 }
